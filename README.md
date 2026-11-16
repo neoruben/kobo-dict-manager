@@ -31,15 +31,19 @@ If you just want to use the application without installing Python:
 
 ---
 
-## ⚠️ Language Compatibility & Testing Status
+## ⚠️ Compatibility & Tested Devices
 
-> [!WARNING]
-> **Experimental Multi-language Support:**
-> While **Kobo DictManager** is architected and prepared to handle dictionaries for any Kobo UI language (such as English `dicthtml.zip`, Spanish `dicthtml-es.zip`, French `dicthtml-fr.zip`, German `dicthtml-de.zip`, Italian `dicthtml-it.zip`, Portuguese `dicthtml-pt.zip`, etc.), **it has currently only been tested thoroughly with Spanish (`dicthtml-es.zip`) on Kobo Clara BW**.
->
-> Support for other languages is structurally ready based on Kobo firmware conventions, but has not yet been validated with physical devices in those languages. Testing feedback, issue reports, and contributions for other languages and Kobo models are very welcome!
+> [!IMPORTANT]
+> **Tested Device:**
+> Currently, **Kobo DictManager** has only been tested on a **Kobo Clara BW** (running Firmware 4.46+).
+> 
+> While it is designed to follow standard Kobo USB and storage conventions across all modern Kobo models (such as Libra 2, Libra Colour, Clara 2E, Clara Colour, Sage, Nia, etc.) and all interface languages (`dicthtml.zip`, `dicthtml-fr.zip`, `dicthtml-de.zip`, etc.), **it has not yet been verified on other hardware models**.
+> 
+> **📢 If you test or get this working on another Kobo model or in other languages, please let us know by opening an [Issue](https://github.com/neoruben/kobo-dict-manager/issues) or Discussion!** Your feedback helps verify support for the entire Kobo lineup.
 
-*(Aviso en español: Aunque la aplicación está preparada internamente para gestionar diccionarios en múltiples idiomas según la configuración del lector, por ahora solo ha sido probada exhaustivamente con diccionarios en español (`dicthtml-es.zip`) en Kobo Clara BW. La compatibilidad con otros idiomas está implementada pero no ha sido testeada en dispositivos reales).*
+---
+
+*(Aviso en español: De momento la aplicación **sólo ha sido probada en un Kobo Clara BW** (firmware 4.46+) y con diccionarios en español (`dicthtml-es.zip`). Si tienes otro modelo de Kobo (Libra, Sage, Nia, Clara 2E/Colour, etc.) o lo pruebas con otros idiomas y te funciona, **por favor abre un Issue o avísanos en GitHub** para confirmarlo y añadirlo a la lista de dispositivos compatibles).*
 
 ---
 
