@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Local application data and large binaries
+library/*.zip
+library/catalog.json
+!library/.gitkeep
+backups/*
+!backups/.gitkeep
+settings.json
+
+# Local system files
+*.lnk
+*.log
+.DS_Store
+Thumbs.db
