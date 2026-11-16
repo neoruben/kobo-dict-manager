@@ -29,7 +29,10 @@ import customtkinter as ctk
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LIBRARY_DIR = os.path.join(BASE_DIR, "library")
 BACKUPS_DIR = os.path.join(BASE_DIR, "backups")
 CATALOG_FILE = os.path.join(LIBRARY_DIR, "catalog.json")
