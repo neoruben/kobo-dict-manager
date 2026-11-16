@@ -25,6 +25,8 @@ from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
+APP_VERSION = "1.2.0"
+
 # Configuración visual
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -1093,7 +1095,7 @@ class ModernDictManagerApp(ctk.CTk):
 
         self.current_lang = load_saved_language()
 
-        self.title(self.t("app_title"))
+        self.title(f"{self.t('app_title')} • v{APP_VERSION}")
         self.geometry("1020x720")
         self.minsize(920, 620)
 
@@ -1132,7 +1134,7 @@ class ModernDictManagerApp(ctk.CTk):
                 save_language_preference(code)
                 break
 
-        self.title(self.t("app_title"))
+        self.title(f"{self.t('app_title')} • v{APP_VERSION}")
         self.add_btn.configure(text=self.t("add_dicts_btn"))
         self.eject_btn.configure(text=self.t("eject_btn"))
         self.open_dict_folder_btn.configure(text=self.t("open_folder_btn"))
@@ -1151,12 +1153,23 @@ class ModernDictManagerApp(ctk.CTk):
         self.header_frame.grid(row=0, column=0, padx=20, pady=(15, 10), sticky="ew")
         self.header_frame.grid_columnconfigure(1, weight=1)
 
+        self.logo_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
+        self.logo_frame.grid(row=0, column=0, padx=(15, 12), pady=12, sticky="w")
+
         self.logo_label = ctk.CTkLabel(
-            self.header_frame,
+            self.logo_frame,
             text="📚 Kobo DictManager",
             font=ctk.CTkFont(size=20, weight="bold")
         )
-        self.logo_label.grid(row=0, column=0, padx=(15, 12), pady=12, sticky="w")
+        self.logo_label.pack(side="left")
+
+        self.version_badge = ctk.CTkLabel(
+            self.logo_frame,
+            text=f"v{APP_VERSION}",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color="#888888"
+        )
+        self.version_badge.pack(side="left", padx=(7, 0), pady=(4, 0))
 
         self.device_status_frame = ctk.CTkFrame(self.header_frame, fg_color="transparent")
         self.device_status_frame.grid(row=0, column=1, padx=5, pady=12, sticky="w")
