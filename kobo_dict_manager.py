@@ -29,18 +29,68 @@ import customtkinter as ctk
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
-if getattr(sys, 'frozen', False):
-    BASE_DIR = os.path.dirname(sys.executable)
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LIBRARY_DIR = os.path.join(BASE_DIR, "library")
-BACKUPS_DIR = os.path.join(BASE_DIR, "backups")
+def get_data_dir():
+    """
+    Retorna el directorio central de datos del usuario (%APPDATA%/KoboDictManager).
+    Permite modo portable si existe un archivo 'portable.dat' en la carpeta del ejecutable/script.
+    """
+    exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+    if os.path.exists(os.path.join(exe_dir, "portable.dat")):
+        return exe_dir
+
+    appdata = os.environ.get("APPDATA")
+    if not appdata:
+        appdata = os.path.expanduser("~")
+    data_dir = os.path.join(appdata, "KoboDictManager")
+    os.makedirs(data_dir, exist_ok=True)
+
+    # Migración automática si existen archivos en carpetas locales previas
+    legacy_lib = os.path.join(exe_dir, "library")
+    legacy_backups = os.path.join(exe_dir, "backups")
+    target_lib = os.path.join(data_dir, "library")
+    target_backups = os.path.join(data_dir, "backups")
+    os.makedirs(target_lib, exist_ok=True)
+    os.makedirs(target_backups, exist_ok=True)
+
+    if os.path.exists(legacy_lib) and os.path.abspath(legacy_lib) != os.path.abspath(target_lib):
+        for f in os.listdir(legacy_lib):
+            src = os.path.join(legacy_lib, f)
+            dst = os.path.join(target_lib, f)
+            if not os.path.exists(dst) and os.path.isfile(src):
+                try:
+                    shutil.copy2(src, dst)
+                except Exception:
+                    pass
+
+    if os.path.exists(legacy_backups) and os.path.abspath(legacy_backups) != os.path.abspath(target_backups):
+        for f in os.listdir(legacy_backups):
+            src = os.path.join(legacy_backups, f)
+            dst = os.path.join(target_backups, f)
+            if not os.path.exists(dst) and os.path.isfile(src):
+                try:
+                    shutil.copy2(src, dst)
+                except Exception:
+                    pass
+
+    return data_dir
+
+DATA_DIR = get_data_dir()
+LIBRARY_DIR = os.path.join(DATA_DIR, "library")
+BACKUPS_DIR = os.path.join(DATA_DIR, "backups")
 CATALOG_FILE = os.path.join(LIBRARY_DIR, "catalog.json")
-SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
+SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
 SEVEN_ZIP = r"C:\Program Files\7-Zip\7z.exe"
 
 os.makedirs(LIBRARY_DIR, exist_ok=True)
 os.makedirs(BACKUPS_DIR, exist_ok=True)
+
+# Especificaciones oficiales de fábrica de Kobo para slots conocidos
+OFFICIAL_FACTORY_SPECS = {
+    "dicthtml-es.zip": {
+        "sha256": "54660219f6912c8e8234193c4d90846ca8d7750f5a180287ef49ba572356c84d",
+        "size": 13976932
+    }
+}
 
 # Idiomas soportados por la interfaz de usuario
 SUPPORTED_LANGUAGES = {
@@ -675,20 +725,40 @@ class KoboBackend:
 
                 # Respaldo oficial automático para la ranura de su idioma si no existe
                 official_backup = os.path.join(BACKUPS_DIR, f"official_{primary_slot}")
+                expected_spec = OFFICIAL_FACTORY_SPECS.get(primary_slot, {})
+                expected_hash = expected_spec.get("sha256")
+
+                # Si ya existía un backup pero era un diccionario personalizado guardado por error, lo limpiamos
+                if os.path.exists(official_backup) and expected_hash:
+                    if get_file_sha256(official_backup) != expected_hash:
+                        try:
+                            os.remove(official_backup)
+                        except Exception:
+                            pass
+
                 if not os.path.exists(official_backup):
                     legacy_path = os.path.join(BACKUPS_DIR, "dicthtml-es_oficial.zip")
                     if os.path.exists(legacy_path) and primary_slot == "dicthtml-es.zip":
-                        try:
-                            shutil.copy2(legacy_path, official_backup)
-                        except Exception:
-                            pass
-                    else:
+                        if not expected_hash or get_file_sha256(legacy_path) == expected_hash:
+                            try:
+                                shutil.copy2(legacy_path, official_backup)
+                            except Exception:
+                                pass
+                    if not os.path.exists(official_backup):
                         current_primary = os.path.join(dict_dir, primary_slot)
                         if os.path.exists(current_primary):
-                            try:
-                                shutil.copy2(current_primary, official_backup)
-                            except Exception as e:
-                                print(f"Aviso al respaldar oficial: {e}")
+                            # Un diccionario oficial de fábrica nunca es ReadOnly
+                            is_ro = is_file_readonly(current_primary)
+                            curr_h = get_file_sha256(current_primary)
+                            is_genuine = not is_ro
+                            if expected_hash and curr_h != expected_hash:
+                                is_genuine = False
+
+                            if is_genuine:
+                                try:
+                                    shutil.copy2(current_primary, official_backup)
+                                except Exception as e:
+                                    print(f"Aviso al respaldar oficial: {e}")
 
                 # Auto-importar diccionario personalizado si no está en biblioteca
                 KoboBackend.auto_import_existing_device_dict(kobo_info)
@@ -774,9 +844,21 @@ class KoboBackend:
             if os.path.exists(legacy_path):
                 backup_path = legacy_path
 
-        if os.path.exists(backup_path):
+        expected_spec = OFFICIAL_FACTORY_SPECS.get(primary_slot, {})
+        expected_hash = expected_spec.get("sha256")
+        expected_size = expected_spec.get("size", 13976932)
+
+        if backup_path and os.path.exists(backup_path):
             sz = os.path.getsize(backup_path)
             h = get_file_sha256(backup_path)
+            # Si el backup no coincide con las especificaciones conocidas de fábrica, se ignora
+            if expected_hash and h != expected_hash:
+                return {
+                    "size": expected_size,
+                    "sha256": expected_hash,
+                    "backup_path": None,
+                    "is_factory": True
+                }
             return {
                 "size": sz,
                 "sha256": h,
@@ -786,9 +868,9 @@ class KoboBackend:
 
         # Fallback genérico si aún no hay copia
         return {
-            "size": 13976932,
-            "sha256": "54660219f6912c8e8234193c4d90846ca8d7750f5a180287ef49ba572356c84d" if primary_slot == "dicthtml-es.zip" else None,
-            "backup_path": backup_path,
+            "size": expected_size,
+            "sha256": expected_hash,
+            "backup_path": None,
             "is_factory": True
         }
 
@@ -1331,16 +1413,20 @@ class ModernDictManagerApp(ctk.CTk):
         primary_slot = self.current_kobo["primary_slot"] if self.current_kobo else "dicthtml-es.zip"
         kobo_lang = self.current_kobo["kobo_lang_name"] if self.current_kobo else "Español"
 
-        active_assigned = False
+        # Comprobamos primero si el diccionario cargado en el lector coincide con uno de la biblioteca
+        active_catalog_key = None
+        for key, item in self.catalog.items():
+            if current_active_hash and current_active_hash == item.get("sha256"):
+                active_catalog_key = key
+                break
 
         # -------------------------------------------------------------
         # 1. ELEMENTO FIJO: DICCIONARIO OFICIAL DE FÁBRICA DEL KOBO
         # -------------------------------------------------------------
         official_info = KoboBackend.get_official_info(primary_slot)
         is_official_active = False
-        if not active_assigned and current_active_hash and current_active_hash == official_info.get("sha256"):
+        if not active_catalog_key and current_active_hash and current_active_hash == official_info.get("sha256"):
             is_official_active = True
-            active_assigned = True
 
         self.create_dict_card(
             parent=self.scroll_frame,
@@ -1359,10 +1445,7 @@ class ModernDictManagerApp(ctk.CTk):
         # -------------------------------------------------------------
         for key, item in self.catalog.items():
             target_slot = item.get("target_slot", primary_slot)
-            is_active = False
-            if not active_assigned and current_active_hash and current_active_hash == item.get("sha256"):
-                is_active = True
-                active_assigned = True
+            is_active = (key == active_catalog_key)
 
             file_name = item.get('source_file', item.get('filename', ''))
             added_date = item.get('added_date', '')
