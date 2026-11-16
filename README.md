@@ -2,6 +2,10 @@
 
 A modern, open-source desktop utility for Windows to effortlessly manage, switch, and protect custom dictionaries on Kobo eReaders.
 
+<p align="center">
+  <img src="assets/screenshot.png" alt="Kobo DictManager Screenshot" width="750" />
+</p>
+
 ---
 
 ## ⚡ Quick Download (Standalone Executable)
