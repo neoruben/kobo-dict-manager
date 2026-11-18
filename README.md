@@ -1,5 +1,11 @@
 # Kobo DictManager
 
+<p align="center">
+  <a href="https://ko-fi.com/neoruben" target="_blank">
+    <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi" height="38">
+  </a>
+</p>
+
 A modern, open-source desktop utility for Windows to effortlessly manage, switch, and protect custom dictionaries on Kobo eReaders.
 
 <p align="center">
